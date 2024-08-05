@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const track = {
     name: "",
@@ -12,12 +13,33 @@ const track = {
     ]
 }
 
+async function getDevice(token) {
+    console.log(token);
+    const devices = await axios.get("https://api.spotify.com/v1/me/player/devices", {
+        headers: {"Authorization": `Bearer ${token}`}
+    })
+
+    return devices.data.devices.shift();
+    }
+
+async function transferPlayback(token, deviceId) {
+    const headers = {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+    return await axios.put("https://api.spotify.com/v1/me/player",
+
+               {"device_ids": [deviceId]}
+                , {headers: headers})
+    }
+
 function WebPlayback(props) {
 
     const [is_paused, setPaused] = useState(false);
     const [is_active, setActive] = useState(false);
     const [player, setPlayer] = useState(undefined);
     const [current_track, setTrack] = useState(track);
+    const [ready, setReady] = useState(false);
 
     useEffect(() => {
 
@@ -39,6 +61,7 @@ function WebPlayback(props) {
 
             player.addListener('ready', ({ device_id }) => {
                 console.log('Ready with Device ID', device_id);
+                transferPlayback(props.token, device_id).then(res => console.log(res));
             });
 
             player.addListener('not_ready', ({ device_id }) => {
@@ -54,8 +77,8 @@ function WebPlayback(props) {
                 setTrack(state.track_window.current_track);
                 setPaused(state.paused);
 
-                player.getCurrentState().then( state => { 
-                    (!state)? setActive(false) : setActive(true) 
+                player.getCurrentState().then( state => {
+                    (!state)? setActive(false) : setActive(true)
                 });
 
             }));
@@ -65,7 +88,7 @@ function WebPlayback(props) {
         };
     }, []);
 
-    if (!is_active) { 
+    if (!is_active) {
         return (
             <>
                 <div className="container">
